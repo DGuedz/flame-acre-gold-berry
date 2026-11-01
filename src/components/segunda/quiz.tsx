@@ -1,35 +1,32 @@
 import { useMemo, useState } from "react";
 import { Check, ChevronLeft } from "lucide-react";
 import {
-  EMPERRA,
   TRIAGEM,
-  USA,
   beneficios,
   diagnostico,
   horarios,
   mailLink,
   mensagemAgenda,
   oferta,
-  precos,
   waLink,
   type Horario,
-  type Opcao,
 } from "@/lib/quiz";
-import { tierById } from "@/lib/sales";
+import { NICHES, tierById } from "@/lib/sales";
+import { siteDe } from "@/lib/sites";
+import { PORTES, fachadasDo, porteDe } from "@/lib/fachadas";
 import { useSegunda } from "@/lib/store";
 import { copyText } from "./bits";
-import { Logo } from "./logos";
 
-type Screen = "usa" | "emperra" | "precos" | "pacote" | "triagem" | "pix" | "agenda" | "pago";
+type Screen = "oficio" | "porte" | "fachadas" | "pacote" | "triagem" | "pix" | "agenda" | "pago";
 
-const ORDEM: Screen[] = ["usa", "emperra", "precos", "pacote", "triagem", "pix", "agenda"];
+const ORDEM: Screen[] = ["oficio", "porte", "fachadas", "pacote", "triagem", "pix", "agenda"];
 
 export function Quiz() {
   const pix = useSegunda((s) => s.pix);
   const setPix = useSegunda((s) => s.setPix);
-  const [screen, setScreen] = useState<Screen>("usa");
-  const [usa, setUsa] = useState<string[]>([]);
-  const [emperra, setEmperra] = useState<string[]>([]);
+  const [screen, setScreen] = useState<Screen>("oficio");
+  const [nicheId, setNicheId] = useState("dent");
+  const [porteId, setPorteId] = useState("medio");
   const [tierId, setTierId] = useState("padrao");
   const [passo, setPasso] = useState(0);
   const [marcas, setMarcas] = useState<string[]>([]);
@@ -38,7 +35,7 @@ export function Quiz() {
   const [email, setEmail] = useState("");
   const [horario, setHorario] = useState<Horario | null>(null);
 
-  const diag = useMemo(() => diagnostico(usa, emperra), [usa, emperra]);
+  const diag = useMemo(() => diagnostico([], []), []);
   const tier = tierById(tierId);
   const lista = beneficios(tier);
   const beneficio = lista[passo] ?? lista[0];
@@ -53,11 +50,11 @@ export function Quiz() {
   }
 
   function back() {
-    if (screen === "emperra") setScreen("usa");
-    else if (screen === "precos") setScreen("emperra");
+    if (screen === "porte") setScreen("oficio");
+    else if (screen === "fachadas") setScreen("porte");
     else if (screen === "pacote") {
       if (passo > 0) setPasso((n) => n - 1);
-      else setScreen("precos");
+      else setScreen("fachadas");
     } else if (screen === "triagem") setScreen("pacote");
     else if (screen === "pix") setScreen("triagem");
     else if (screen === "agenda") setScreen("pix");
@@ -89,7 +86,7 @@ export function Quiz() {
   return (
     <main className="mx-auto flex h-dvh w-full max-w-lg flex-col overflow-hidden bg-bg px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <header className="mb-3 flex shrink-0 items-center gap-3">
-        {screen === "usa" ? (
+        {screen === "oficio" ? (
           <span className="shrink-0 text-sm font-semibold tracking-tight text-fg">Fachada</span>
         ) : (
           <button
@@ -109,36 +106,37 @@ export function Quiz() {
       </header>
 
       <div key={screen === "pacote" ? `pacote-${passo}` : screen} className="quiz-rise flex min-h-0 flex-1 flex-col">
-        {screen === "usa" && (
-          <Marca
-            title="Marca o que você já usa"
-            hint="Pode marcar mais de um."
-            cards={USA}
-            picked={usa}
-            onToggle={(id) => toggle(id, usa, setUsa)}
-            onNext={() => setScreen("emperra")}
-            next="Pronto"
-            locked={usa.length === 0}
+        {screen === "oficio" && (
+          <Escolha
+            title="Qual é o negócio?"
+            hint="A página que abre é do seu ofício."
+            options={NICHES.map((item) => ({ id: item.id, label: item.label, frase: "" }))}
+            picked={nicheId}
+            onPick={setNicheId}
+            onNext={() => setScreen("porte")}
+            next="Ver o tamanho"
           />
         )}
-        {screen === "emperra" && (
-          <Marca
-            title="O que emperra hoje?"
-            hint="Marca o que acontece com o cliente."
-            cards={EMPERRA}
-            picked={emperra}
-            onToggle={(id) => toggle(id, emperra, setEmperra)}
-            onNext={() => setScreen("precos")}
-            next="Ver os preços"
-            locked={emperra.length === 0}
+        {screen === "porte" && (
+          <Escolha
+            title="Qual o tamanho?"
+            hint="O tamanho marca a fachada que cabe."
+            options={PORTES.map((item) => ({ id: item.id, label: item.label, frase: item.frase }))}
+            picked={porteId}
+            onPick={(id) => {
+              setPorteId(id);
+              setTierId(porteDe(id).site);
+            }}
+            onNext={() => setScreen("fachadas")}
+            next="Ver as fachadas"
           />
         )}
-        {screen === "precos" && (
-          <Precos sugerido={diag.sugerido.id} onChoose={escolher} />
+        {screen === "fachadas" && (
+          <Fachadas nicheId={nicheId} porteId={porteId} onChoose={escolher} />
         )}
         {screen === "pacote" && (
           <Pacote
-            label={tier.label}
+            label={siteDe(tier.id).nome}
             valor={`R$ ${tier.price.toLocaleString("pt-BR")}`}
             titulo={beneficio.titulo}
             frase={beneficio.frase}
@@ -164,7 +162,7 @@ export function Quiz() {
         )}
         {screen === "pix" && (
           <Pix
-            label={tier.label}
+            label={siteDe(tier.id).nome}
             valor={`R$ ${tier.price.toLocaleString("pt-BR")}`}
             promessa={oferta(tier.id).promessa}
             fecha={oferta(tier.id).fecha}
@@ -175,7 +173,7 @@ export function Quiz() {
           />
         )}
         {screen === "agenda" && (
-          <Agenda label={tier.label} escopo={`${tier.hours}. O primeiro encontro é este.`} slots={slots} onPick={marcarHorario} />
+          <Agenda label={siteDe(tier.id).nome} escopo={`${tier.hours}. O primeiro encontro é este.`} slots={slots} onPick={marcarHorario} />
         )}
         {screen === "pago" && horario && (
           <Pago nome={nome} quando={horario.quando} texto={texto} zap={waLink(phone, texto)} mail={mailLink(email, texto)} />
@@ -185,45 +183,40 @@ export function Quiz() {
   );
 }
 
-function Marca({
+function Escolha({
   title,
   hint,
-  cards,
+  options,
   picked,
-  onToggle,
+  onPick,
   onNext,
   next,
-  locked,
 }: {
   title: string;
   hint: string;
-  cards: Opcao[];
-  picked: string[];
-  onToggle: (id: string) => void;
+  options: { id: string; label: string; frase: string }[];
+  picked: string;
+  onPick: (id: string) => void;
   onNext: () => void;
   next: string;
-  locked: boolean;
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <h1 className="shrink-0 font-display text-4xl leading-none font-semibold text-fg">{title}</h1>
       <p className="mt-2 shrink-0 text-sm text-muted">{hint}</p>
-      <div className="mt-3 grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-3">
-        {cards.map((card, index) => {
-          const on = picked.includes(card.id);
+      <div className="mt-3 grid min-h-0 flex-1 grid-cols-2 content-start gap-2 overflow-y-auto">
+        {options.map((item) => {
+          const on = item.id === picked;
           return (
             <button
-              key={card.id}
+              key={item.id}
               type="button"
               aria-pressed={on}
-              onClick={() => onToggle(card.id)}
-              style={{ animationDelay: `${index * 60}ms` }}
-              className="logo-tile quiz-pop relative flex min-h-0 flex-col items-center justify-center gap-2 rounded-xl px-2 text-center"
+              onClick={() => onPick(item.id)}
+              className="logo-tile relative min-h-16 rounded-xl px-3 py-3 text-left"
             >
-              <span className="quiz-icon" style={{ animationDelay: `${index * 60}ms` }}>
-                <Logo name={card.logo} />
-              </span>
-              <span className="text-sm font-semibold text-fg">{card.label}</span>
+              <span className="block text-sm font-semibold text-fg">{item.label}</span>
+              {item.frase ? <span className="mt-1 block text-xs text-muted">{item.frase}</span> : null}
               {on ? (
                 <span className="absolute top-2 right-2 grid size-5 place-items-center rounded-full bg-[#22a35a] text-white">
                   <Check className="size-3" strokeWidth={3} />
@@ -233,42 +226,53 @@ function Marca({
           );
         })}
       </div>
-      <button
-        type="button"
-        disabled={locked}
-        onClick={onNext}
-        className="logo-go mt-3 h-12 w-full shrink-0 rounded-lg text-sm font-semibold disabled:opacity-70"
-      >
+      <button type="button" onClick={onNext} className="logo-go mt-3 h-12 w-full shrink-0 rounded-lg text-sm font-semibold">
         {next}
       </button>
     </div>
   );
 }
 
-function Precos({ sugerido, onChoose }: { sugerido: string; onChoose: (id: string) => void }) {
+function Fachadas({
+  nicheId,
+  porteId,
+  onChoose,
+}: {
+  nicheId: string;
+  porteId: string;
+  onChoose: (id: string) => void;
+}) {
+  const mesa = fachadasDo(nicheId, porteId);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <h1 className="shrink-0 font-display text-4xl leading-none font-semibold text-fg">Escolhe o pacote.</h1>
-      <p className="mt-2 shrink-0 text-sm text-muted">Toca num preço. Ele abre.</p>
-      <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3">
-        {precos().map((item, index) => (
+      <h1 className="shrink-0 font-display text-4xl leading-none font-semibold text-fg">Três fachadas.</h1>
+      <p className="mt-2 shrink-0 text-sm text-muted">
+        De {mesa.niche.label.toLowerCase()}. A marcada cabe no {mesa.porte.label.toLowerCase()}.
+      </p>
+      <div className="mt-3 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+        {mesa.sites.map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => onChoose(item.id)}
-            style={{ animationDelay: `${index * 70}ms` }}
-            className="logo-tile quiz-pop flex flex-1 flex-col justify-center rounded-xl px-4 py-3 text-left"
+            className="logo-tile rounded-xl px-3 py-3 text-left"
           >
-            <span className="flex items-start justify-between gap-3">
-              <span className="font-display text-3xl leading-none font-semibold text-fg">{item.label}</span>
-              <span className="shrink-0 font-display text-3xl leading-none font-semibold text-lime">{item.valor}</span>
+            <span className="block rounded-lg bg-bg px-3 py-2">
+              <span className="block h-1 w-8 rounded-full bg-lime" />
+              <span className="mt-1 block font-display text-lg leading-none font-semibold text-fg">{item.face.titulo}</span>
+              {item.face.linhas.map((linha) => (
+                <span key={linha} className="mt-1 block text-xs text-muted">
+                  {linha}
+                </span>
+              ))}
             </span>
-            <span className="mt-2 block text-sm leading-snug text-fg">{item.promessa}</span>
-            <span className="mt-1 block text-xs text-muted">{item.entrega}</span>
-            <span className="block text-xs font-semibold text-lime">{item.acompanha}</span>
-            {item.id === sugerido ? (
+            <span className="mt-2 flex items-baseline justify-between gap-3">
+              <span className="font-display text-2xl leading-none font-semibold text-fg">{item.nome}</span>
+              <span className="font-display text-2xl leading-none font-semibold text-lime">{item.valor}</span>
+            </span>
+            {item.cabe ? (
               <span className="mt-2 inline-flex w-fit rounded-full bg-[#22a35a] px-2 py-0.5 text-xs font-semibold text-white">
-                Pra você
+                Cabe em você
               </span>
             ) : null}
           </button>
@@ -314,7 +318,7 @@ function Pacote({
         ))}
       </div>
       <button type="button" onClick={onNext} className="logo-go h-12 w-full shrink-0 rounded-lg text-sm font-semibold">
-        {ultimo ? "Fazer a triagem" : "Próximo benefício"}
+        {ultimo ? "Fazer a triagem" : "O que vem atrás"}
       </button>
     </div>
   );

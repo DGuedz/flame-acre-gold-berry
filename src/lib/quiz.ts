@@ -1,4 +1,5 @@
 import { TIERS, tierById, type Tier } from "@/lib/sales";
+import { siteDe } from "./sites";
 
 export type Opcao = {
   id: string;
@@ -62,13 +63,7 @@ export function diagnostico(usa: string[], emperra: string[]) {
 }
 
 export function beneficios(tier: Tier): Beneficio[] {
-  return [
-    { titulo: "No ar", frase: `${tier.calendar}. O botão abre o seu WhatsApp.` },
-    { titulo: "Os encontros", frase: tier.hours + ". Você senta. A gente faz junto." },
-    { titulo: "O curso", frase: tier.course },
-    { titulo: "O que entra de sistema", frase: tier.legacy },
-    { titulo: "Depois do ar", frase: tier.follow },
-  ];
+  return siteDe(tier.id).atras;
 }
 
 const FECHO: Record<string, { promessa: string; entrega: string; acompanha: string; fecha: string }> = {
@@ -97,13 +92,20 @@ export function oferta(id: string) {
 }
 
 export function precos() {
-  return TIERS.map((tier) => ({
-    id: tier.id,
-    label: tier.label,
-    valor: `R$ ${tier.price.toLocaleString("pt-BR")}`,
-    quando: tier.calendar,
-    ...oferta(tier.id),
-  }));
+  return TIERS.map((tier) => {
+    const site = siteDe(tier.id);
+    return {
+      id: tier.id,
+      label: tier.label,
+      nome: site.nome,
+      cara: site.cara,
+      atras: site.atras.length,
+      valor: `R$ ${tier.price.toLocaleString("pt-BR")}`,
+      quando: tier.calendar,
+      ...oferta(tier.id),
+      promessa: site.cara,
+    };
+  });
 }
 
 export function horarios(tier: Tier, senta: boolean): Horario[] {
@@ -148,7 +150,7 @@ export function mensagemAgenda(
       ? ""
       : "Se logo ou domínio ainda não estiver na mão, a gente resolve nesse primeiro encontro.";
   return [
-    `Oi, ${quem}. O Pix do ${tier.label} caiu. R$ ${tier.price.toLocaleString("pt-BR")}.`,
+    `Oi, ${quem}. O Pix da ${siteDe(tier.id).nome} caiu. R$ ${tier.price.toLocaleString("pt-BR")}.`,
     entra ? `Pelo que você marcou, o site entra com ${entra}.` : "",
     pronto.join(" "),
     falta,
