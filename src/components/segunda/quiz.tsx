@@ -11,7 +11,7 @@ import {
   waLink,
   type Horario,
 } from "@/lib/quiz";
-import { NICHES, tierById } from "@/lib/sales";
+import { NICHES, PIX, tierById } from "@/lib/sales";
 import { siteDe } from "@/lib/sites";
 import { PORTES, fachadasDo, porteDe } from "@/lib/fachadas";
 import { useSegunda } from "@/lib/store";
@@ -21,13 +21,20 @@ type Screen = "oficio" | "porte" | "fachadas" | "pacote" | "triagem" | "pix" | "
 
 const ORDEM: Screen[] = ["oficio", "porte", "fachadas", "pacote", "triagem", "pix", "agenda"];
 
-export function Quiz() {
+export function Quiz({
+  inicio,
+  onSair,
+}: {
+  inicio?: { nicheId: string; porteId: string };
+  onSair?: () => void;
+}) {
   const pix = useSegunda((s) => s.pix);
+  const chave = pix.trim() || PIX;
   const setPix = useSegunda((s) => s.setPix);
-  const [screen, setScreen] = useState<Screen>("oficio");
-  const [nicheId, setNicheId] = useState("dent");
-  const [porteId, setPorteId] = useState("medio");
-  const [tierId, setTierId] = useState("padrao");
+  const [screen, setScreen] = useState<Screen>(inicio ? "fachadas" : "oficio");
+  const [nicheId, setNicheId] = useState(inicio?.nicheId ?? "dent");
+  const [porteId, setPorteId] = useState(inicio?.porteId ?? "medio");
+  const [tierId, setTierId] = useState(inicio ? porteDe(inicio.porteId).site : "padrao");
   const [passo, setPasso] = useState(0);
   const [marcas, setMarcas] = useState<string[]>([]);
   const [nome, setNome] = useState("");
@@ -50,7 +57,8 @@ export function Quiz() {
   }
 
   function back() {
-    if (screen === "porte") setScreen("oficio");
+    if (screen === "fachadas" && onSair) onSair();
+    else if (screen === "porte") setScreen("oficio");
     else if (screen === "fachadas") setScreen("porte");
     else if (screen === "pacote") {
       if (passo > 0) setPasso((n) => n - 1);
@@ -166,9 +174,9 @@ export function Quiz() {
             valor={`R$ ${tier.price.toLocaleString("pt-BR")}`}
             promessa={oferta(tier.id).promessa}
             fecha={oferta(tier.id).fecha}
-            pix={pix}
+            pix={chave}
             onPix={setPix}
-            onCopy={() => void copyText(pix.trim() || `R$ ${tier.price.toLocaleString("pt-BR")}`)}
+            onCopy={() => void copyText(chave)}
             onPaid={() => setScreen("agenda")}
           />
         )}
@@ -418,7 +426,9 @@ function Pix({
         <p className="mt-4 max-w-xs font-display text-3xl leading-none font-semibold text-fg">{promessa}</p>
         <p className="mt-3 max-w-xs text-sm text-muted">{fecha} O horário abre quando o Pix cair.</p>
         {pix.trim() ? (
-          <p className="mt-4 rounded-xl border border-line bg-surface px-3 py-3 text-sm text-fg">Pix: {pix.trim()}</p>
+          <p className="mt-4 rounded-xl border border-line bg-surface px-3 py-3 text-sm text-fg">
+            Pix: {pix.trim().replace(/^(\d{3})(\d{5})(\d{4})$/, "$1 $2-$3")}
+          </p>
         ) : (
           <div className="mt-4">
             <Field label="Chave Pix" value={pix} onChange={onPix} placeholder="pra receber" />

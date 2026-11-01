@@ -90,3 +90,20 @@ export function fachadasDo(nicheId: string, porteId: string) {
     }),
   };
 }
+
+export function modelos() {
+  return NICHES.flatMap((niche) =>
+    PORTES.map((porte) => {
+      const site = siteDe(porte.site);
+      return {
+        nicheId: niche.id,
+        niche: niche.label,
+        porteId: porte.id,
+        siteId: porte.site,
+        nome: site.nome,
+        valor: `R$ ${site.preco.toLocaleString("pt-BR")}`,
+        face: pagina(niche.id, porte.site),
+      };
+    }),
+  );
+}

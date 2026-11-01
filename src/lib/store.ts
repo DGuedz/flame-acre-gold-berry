@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { PIX } from "./sales";
 
 export type LeadStatus =
   | "lista"
@@ -56,7 +57,7 @@ export const useSegunda = create<SegundaState>()(
     (set) => ({
       tab: "hoje",
       seller: "",
-      pix: "",
+      pix: PIX,
       city: "Curitiba",
       nicheId: "adv",
       tierId: "padrao",
@@ -96,7 +97,15 @@ export const useSegunda = create<SegundaState>()(
       removeLead: (id) =>
         set((s) => ({ leads: s.leads.filter((lead) => lead.id !== id) })),
     }),
-    { name: "segunda-os", skipHydration: true },
+    {
+      name: "segunda-os",
+      skipHydration: true,
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<SegundaState>;
+        const pix = typeof saved.pix === "string" && saved.pix.trim() ? saved.pix : current.pix;
+        return { ...current, ...saved, pix };
+      },
+    },
   ),
 );
 

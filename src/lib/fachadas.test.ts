@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { NICHES } from "./sales.ts";
-import { fachadasDo, pagina } from "./fachadas.ts";
+import { fachadasDo, modelos, pagina } from "./fachadas.ts";
 
 describe("fachada do nicho", () => {
   it("cada ofício tem três páginas, e o porte aponta uma", () => {
@@ -28,5 +28,11 @@ describe("fachada do nicho", () => {
   it("o dentista não vê a página do advogado", () => {
     assert.notEqual(pagina("dent", "curto").titulo, pagina("adv", "curto").titulo);
     assert.match(pagina("dent", "padrao").titulo, /Clínica/);
+  });
+
+  it("a grade tem uma página por ofício e por tamanho", () => {
+    const grade = modelos();
+    assert.equal(grade.length, NICHES.length * 3);
+    assert.equal(grade.filter((item) => item.nicheId === "pet" && item.nome === "Casa").length, 1);
   });
 });

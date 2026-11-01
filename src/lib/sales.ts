@@ -1,4 +1,5 @@
 export const PRICE = 2997;
+export const PIX = "062996463066";
 
 export type Tier = {
   id: string;
